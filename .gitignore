@@ -6,3 +6,9 @@ build
 out
 .kiro
 .vscode
+
+# Local MCP configs
+.cursor/
+run_gradle_mcp.py
+temp_mcp*.json
+kotlin-mcp-setup.md
