@@ -1,0 +1,14 @@
+{
+  "mcpServers": {
+    "gradle-mcp-server": {
+      "command": "java",
+      "args": [
+        "-jar",
+        "/Users/nadezdapsh/gradle-mcp-server-all.jar"
+      ],
+      "env": {},
+      "disabled": false,
+      "autoApprove": ["get_gradle_project_info"]
+    }
+  }
+}
