@@ -8,6 +8,7 @@ private val logger = KotlinLogging.logger {}
 
 interface SummaryOrchestrator {
     suspend fun processSummaryRequest(url: String): Result<Summary>
+    suspend fun summarizeText(text: String, wasTruncated: Boolean = false): Summary
 }
 
 class SummaryOrchestratorImpl(
@@ -40,6 +41,27 @@ class SummaryOrchestratorImpl(
         } catch (e: Exception) {
             logger.error(e) { "Orchestration error ($url)" }
             Result.Failure(SummarizerError.UnknownError(e))
+        }
+    }
+
+    override suspend fun summarizeText(text: String, wasTruncated: Boolean): Summary {
+        logger.info { "Summarizing text (length: ${text.length}, wasTruncated: $wasTruncated)" }
+        
+        val content = ExtractedContent(
+            text = text,
+            title = null,
+            url = "voice_message",
+            wasTruncated = wasTruncated
+        )
+        
+        val summaryResult = aiProvider.generateSummary(content)
+        
+        return when (summaryResult) {
+            is Result.Success -> summaryResult.value
+            is Result.Failure -> {
+                logger.error { "AI failed to summarize text: ${summaryResult.error}" }
+                throw RuntimeException("Failed to summarize text: ${summaryResult.error}")
+            }
         }
     }
 }

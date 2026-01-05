@@ -31,10 +31,14 @@ class OpenAIProvider(
     private val json = Json { ignoreUnknownKeys = true }
 
     override suspend fun generateSummary(content: ExtractedContent): Result<Summary> {
+        // Определяем тип контента: голосовое сообщение или статья
+        val isVoiceMessage = content.url == "voice_message"
+        val systemPrompt = if (isVoiceMessage) VOICE_MESSAGE_PROMPT else SYSTEM_PROMPT
+        
         val request = ChatCompletionRequest(
             model = MODEL,
             messages = listOf(
-                ChatMessage("system", SYSTEM_PROMPT),
+                ChatMessage("system", systemPrompt),
                 ChatMessage("user", content.text)
             ),
             responseFormat = ResponseFormat("json_object")
@@ -45,9 +49,38 @@ class OpenAIProvider(
                 header(HttpHeaders.Authorization, "Bearer $apiKey")
                 contentType(ContentType.Application.Json)
                 setBody(request)
-            }.body<ChatCompletionResponse>()
+            }
 
-            val contentJson = response.choices.firstOrNull()?.message?.content
+            // Проверяем статус ответа перед десериализацией
+            if (response.status.value !in 200..299) {
+                val errorBody = try {
+                    response.body<String>()
+                } catch (e: Exception) {
+                    "Unable to read error body: ${e.message}"
+                }
+                logger.error { "OpenAI API error: ${response.status} - $errorBody" }
+                
+                // Формируем понятное сообщение для пользователя
+                val userMessage = when (response.status.value) {
+                    429 -> "Превышен лимит запросов к OpenAI. Попробуйте позже."
+                    401 -> "Ошибка аутентификации OpenAI API. Проверьте API ключ."
+                    500, 502, 503, 504 -> "Временная ошибка сервера OpenAI. Попробуйте позже."
+                    else -> "Ошибка OpenAI API: ${response.status}"
+                }
+                return Result.Failure(SummarizerError.AIError(userMessage))
+            }
+
+            // Пытаемся десериализовать успешный ответ
+            val chatResponse = try {
+                response.body<ChatCompletionResponse>()
+            } catch (e: kotlinx.serialization.SerializationException) {
+                // Если десериализация не удалась, возможно это ошибка API в формате JSON
+                // Но body уже прочитан, поэтому нужно использовать другой подход
+                logger.error { "Failed to deserialize OpenAI response: $e" }
+                return Result.Failure(SummarizerError.AIError("Invalid response format from OpenAI: ${e.message}"))
+            }
+
+            val contentJson = chatResponse.choices.firstOrNull()?.message?.content
                 ?: return Result.Failure(SummarizerError.AIError("Empty response from OpenAI"))
 
             val dto = json.decodeFromString<SummaryDto>(contentJson)
@@ -71,6 +104,7 @@ class OpenAIProvider(
 
     private companion object {
         const val MODEL = "gpt-4o-mini"
+        
         val SYSTEM_PROMPT = """
             Ты — Senior AI Analyst. Твоя цель — структурировать входящую информацию для занятых профессионалов.
             
@@ -89,6 +123,51 @@ class OpenAIProvider(
                 "keyPoints": ["string", "string"],
                 "sentiment": "string",
                 "clickbaitScore": int,
+                "tags": ["string", "string"]
+            }
+        """.trimIndent()
+        
+        val VOICE_MESSAGE_PROMPT = """
+            Ты — AI-ассистент, который анализирует голосовые сообщения. Твоя задача — извлечь суть из разговорной речи, учитывая особенности устной коммуникации.
+            
+            ОСОБЕННОСТИ ГОЛОСОВЫХ СООБЩЕНИЙ:
+            - Могут содержать паузы, повторы, междометия ("ээ", "ну", "вот")
+            - Разговорная речь, неформальный стиль
+            - Могут быть вопросы, просьбы, мнения, инструкции
+            - Контекст может быть неполным или имплицитным
+            - Важно уловить намерение говорящего, а не только факты
+            
+            ТРЕБОВАНИЯ К АНАЛИЗУ:
+            1. Main Idea: Сформулируй главную мысль или намерение говорящего. Если это вопрос — укажи, о чем спрашивают. Если просьба — что просят. Если мнение — в чем суть позиции. Если информация — ключевой вывод.
+            2. Key Points: Выдели основные моменты (от 3 до 8 пунктов):
+               - Конкретные факты, цифры, даты, имена
+               - Важные детали или примеры
+               - Ключевые аргументы или рассуждения
+               - Действия или планы, если упомянуты
+               - Игнорируй повторы и междометия, но сохраняй смысл
+            3. Sentiment: Определи эмоциональный тон:
+               - Positive — позитивный, воодушевленный, довольный
+               - Neutral — нейтральный, информативный, деловой
+               - Negative — негативный, обеспокоенный, критичный
+               - Question — вопрос, запрос информации
+               - Request — просьба, инструкция
+            4. Clickbait Score: Для голосовых сообщений всегда ставь 0 (не применимо).
+            5. Tags: 3-5 ключевых тегов на русском, отражающих темы сообщения.
+            
+            ВАЖНО:
+            - Не добавляй информацию, которой нет в тексте
+            - Сохраняй оригинальный смысл, даже если речь неформальная
+            - Если текст содержит вопросы — отрази их в keyPoints
+            - Если есть неопределенность — укажи это в mainIdea
+            
+            ЯЗЫК: Русский (Russian).
+            ФОРМАТ: Строгий JSON без комментариев.
+            
+            {
+                "mainIdea": "string",
+                "keyPoints": ["string", "string"],
+                "sentiment": "string",
+                "clickbaitScore": 0,
                 "tags": ["string", "string"]
             }
         """.trimIndent()
