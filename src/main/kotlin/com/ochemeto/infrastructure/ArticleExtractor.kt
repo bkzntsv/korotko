@@ -5,6 +5,8 @@ import com.ochemeto.domain.ExtractedContent
 import com.ochemeto.domain.Result
 import com.ochemeto.domain.SummarizerError
 import io.ktor.client.HttpClient
+import io.ktor.client.network.sockets.ConnectTimeoutException
+import io.ktor.client.plugins.HttpRequestTimeoutException
 import io.ktor.client.request.get
 import io.ktor.client.request.header
 import io.ktor.client.statement.bodyAsText
@@ -62,6 +64,12 @@ class ArticleExtractor(
                     }
                 }
             }
+        } catch (e: ConnectTimeoutException) {
+            logger.warn { "Connection timeout for $url" }
+            Result.Failure(SummarizerError.NetworkError("Connection timeout. Site may be slow or blocking requests."))
+        } catch (e: HttpRequestTimeoutException) {
+            logger.warn { "Request timeout for $url" }
+            Result.Failure(SummarizerError.NetworkError("Request timeout. Site took too long to respond."))
         } catch (e: Exception) {
             logger.error(e) { "Extraction failed for $url" }
             Result.Failure(SummarizerError.UnknownError(e))

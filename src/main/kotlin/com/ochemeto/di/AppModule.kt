@@ -30,8 +30,8 @@ val appModule = module {
                 })
             }
             install(HttpTimeout) {
-                requestTimeoutMillis = 60000 // 60s for OpenAI/Scraping
-                connectTimeoutMillis = 10000
+                requestTimeoutMillis = 60000
+                connectTimeoutMillis = 30000 // 30s for slow/protected sites
                 socketTimeoutMillis = 60000
             }
         }
