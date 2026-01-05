@@ -22,12 +22,15 @@ class ResponseFormatterTest : StringSpec({
         
         val result = ResponseFormatter.formatSummary(summary, wasTruncated = false)
         
+        // Проверяем порядок: заголовок, суть, тезисы, ссылка, тон
         result shouldContain "📄 **Article Title**"
-        result shouldContain "🟢 **Тон:** Positive"
         result shouldContain "**Суть:** Main Idea"
         result shouldContain "• Point 1"
-        result shouldContain "#AI #Tech"
         result shouldContain "🔗 [Оригинал](http://example.com)"
+        result shouldContain "🟢 **Тон:** Positive"
+        // Теги не должны отображаться
+        result shouldNotContain "#AI"
+        result shouldNotContain "#Tech"
         // Clickbait score <= 5 should be hidden
         result shouldNotContain "⚠️ **Кликбейт:**"
     }
