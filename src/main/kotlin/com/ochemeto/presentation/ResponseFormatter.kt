@@ -4,40 +4,39 @@ import com.ochemeto.domain.SummarizerError
 import com.ochemeto.domain.Summary
 
 object ResponseFormatter {
-    fun formatSummary(summary: Summary, wasTruncated: Boolean = false) = buildString {
-        // Предупреждение о частичной обработке (если было)
+    fun formatSummary(summary: Summary, wasTruncated: Boolean = false, isVoiceMessage: Boolean = false) = buildString {
         if (wasTruncated) {
             append("⚠️ _Статья очень длинная, обработана частично_\n\n")
         }
         
-        // Заголовок статьи
-        append("📄 **${summary.title ?: "Без названия"}**\n\n")
+        if (!isVoiceMessage && summary.title != null) {
+            append("📄 **${summary.title}**\n\n")
+        }
         
-        // Суть
         append("**Суть:** ${summary.mainIdea}\n\n")
-        
-        // Ключевые тезисы
         append("**Ключевые тезисы:**\n")
         summary.keyPoints.forEach { point ->
             append("• $point\n")
         }
         append("\n")
         
-        // Ссылка на оригинал
-        append("🔗 [Оригинал](${summary.originalUrl})\n\n")
+        if (!isVoiceMessage) {
+            append("🔗 [Оригинал](${summary.originalUrl})\n\n")
+        }
         
-        // Тон статьи и оценка кликбейта
         val sentimentEmoji = when (summary.sentiment.lowercase()) {
             "positive" -> "🟢"
             "negative" -> "🔴"
             "neutral" -> "⚪"
             "technical" -> "🔧"
+            "question" -> "❓"
+            "request" -> "📋"
             else -> "🔵"
         }
         
         append("$sentimentEmoji **Тон:** ${summary.sentiment}")
         
-        if (summary.clickbaitScore > 5) {
+        if (!isVoiceMessage && summary.clickbaitScore > 5) {
             append("  |  ⚠️ **Кликбейт:** ${summary.clickbaitScore}/10")
         }
     }

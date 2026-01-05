@@ -20,6 +20,8 @@ dependencies {
     
     // Telegram Bot
     implementation("io.github.kotlin-telegram-bot.kotlin-telegram-bot:telegram:6.1.0")
+    // Retrofit is needed because Bot methods return retrofit2.Response
+    implementation("com.squareup.retrofit2:retrofit:2.9.0")
     
     // HTTP Client
     implementation("io.ktor:ktor-client-core:2.3.7")
@@ -37,6 +39,12 @@ dependencies {
     // Logging
     implementation("ch.qos.logback:logback-classic:1.4.14")
     implementation("io.github.microutils:kotlin-logging-jvm:3.0.5")
+    
+    // OpenAI Client for Whisper
+    implementation("com.aallam.openai:openai-client:3.7.0")
+    
+    // Okio for FileSource
+    implementation("com.squareup.okio:okio:3.6.0")
     
     // Testing
     testImplementation("io.kotest:kotest-runner-junit5:5.8.0")
