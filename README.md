@@ -6,32 +6,32 @@
 
 ## Key Features
 
-    **Executive Summaries**: Delivers the main idea and key takeaways, answering "Why does this matter?"
-    **Voice Transcription**: Transcribes voice messages and audio files, then summarizes long transcripts automatically.
-    **Smart Analysis**: Evaluates article sentiment and detects clickbait (0-10 score).
-    **Clean Extraction**: Uses `Readability4J` to strip ads, navigation, and paywalls, focusing only on the content.
-    **Multilingual Input**: Summarizes articles in any language into Russian.
-    **Privacy-First**: No data storage, processes links and voice messages on-the-fly.
+**Executive Summaries**: Delivers the main idea and key takeaways, answering "Why does this matter?"
+**Voice Transcription**: Transcribes voice messages and audio files, then summarizes long transcripts automatically.
+**Smart Analysis**: Evaluates article sentiment and detects clickbait (0-10 score).
+**Clean Extraction**: Uses `Readability4J` to strip ads, navigation, and paywalls, focusing only on the content.
+**Multilingual Input**: Summarizes articles in any language into Russian.
+**Privacy-First**: No data storage, processes links and voice messages on-the-fly.
 
 ## Tech Stack
 
 Built with **Kotlin** and **Clean Architecture** principles.
 
-    **Core**: Kotlin 1.9, Coroutines
-    **Network**: Ktor Client (CIO engine)
-    **Parsing**: Jsoup, Readability4J
-    **AI**: OpenAI API (GPT-4o-mini for summaries, Whisper for transcription)
-    **Bot**: Kotlin Telegram Bot API
-    **DI**: Koin
-    **File Handling**: Okio
-    **Testing**: Kotest (Property-based testing), MockK
+**Core**: Kotlin 1.9, Coroutines
+**Network**: Ktor Client (CIO engine)
+**Parsing**: Jsoup, Readability4J
+**AI**: OpenAI API (GPT-4o-mini for summaries, Whisper for transcription)
+**Bot**: Kotlin Telegram Bot API
+**DI**: Koin
+**File Handling**: Okio
+**Testing**: Kotest (Property-based testing), MockK
 
 ## Getting Started
 
 ### Prerequisites
-    JDK 21+
-    Telegram Bot Token
-    OpenAI API Key
+JDK 21+
+Telegram Bot Token
+OpenAI API Key
 
 ### Run Locally
 
