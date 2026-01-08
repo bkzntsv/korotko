@@ -1,0 +1,11 @@
+services:
+  bot:
+    build: .
+    restart: unless-stopped
+    environment:
+      - TELEGRAM_BOT_TOKEN=${TELEGRAM_BOT_TOKEN}
+      - OPENAI_API_KEY=${OPENAI_API_KEY}
+      - USER_AGENT=${USER_AGENT:-Mozilla/5.0 (compatible; Bot/1.0)}
+    # Если вы хотите монтировать файл с логами или базу данных (если появится)
+    # volumes:
+    #   - ./logs:/app/logs
