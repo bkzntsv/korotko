@@ -31,7 +31,7 @@ Built with **Kotlin** and **Clean Architecture** principles.
 
 ### Prerequisites
 
-- JDK 21+
+- JDK 21
 - Telegram Bot Token
 - OpenAI API Key
 

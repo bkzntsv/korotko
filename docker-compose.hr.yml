@@ -1,0 +1,9 @@
+services:
+  hr-bot:
+    build: .
+    restart: unless-stopped
+    container_name: hr-bot
+    environment:
+      - TELEGRAM_BOT_TOKEN=${TELEGRAM_BOT_TOKEN}
+      - OPENAI_API_KEY=${OPENAI_API_KEY}
+      - ZENROWS_API_KEY=${ZENROWS_API_KEY}

@@ -3,7 +3,9 @@ package com.ochemeto.config
 data class BotConfig(
     val telegramToken: String,
     val openAiApiKey: String,
-    val userAgent: String = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
+    val userAgent: String = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+    val zenRowsApiKey: String? = null,
+    val linkedinCookie: String? = null
 )
 
 class ConfigurationException(message: String) : RuntimeException(message)
@@ -26,10 +28,15 @@ object ConfigLoader {
         val userAgent = envProvider.get("USER_AGENT") 
             ?: "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
 
+        val zenRowsApiKey = envProvider.get("ZENROWS_API_KEY")?.takeIf { it.isNotBlank() }
+        val linkedinCookie = envProvider.get("LINKEDIN_COOKIE")?.takeIf { it.isNotBlank() }
+
         return BotConfig(
             telegramToken = telegramToken,
             openAiApiKey = openAiApiKey,
-            userAgent = userAgent
+            userAgent = userAgent,
+            zenRowsApiKey = zenRowsApiKey,
+            linkedinCookie = linkedinCookie
         )
     }
 }

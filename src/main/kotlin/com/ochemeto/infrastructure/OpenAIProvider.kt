@@ -103,28 +103,40 @@ class OpenAIProvider(
     }
 
     private companion object {
-        const val MODEL = "gpt-4o-mini"
+        const val MODEL = "gpt-5-nano"
         
         val SYSTEM_PROMPT = """
-            Ты — Senior AI Analyst. Твоя цель — структурировать входящую информацию для занятых профессионалов.
-            
-            ТРЕБОВАНИЯ К АНАЛИЗУ:
-            1. Main Idea: Должна отвечать на вопрос "Почему это важно?".
-            2. Key Points: Выдели основные факты, цифры или аргументы (от 3 до 10 пунктов). Обязательно отрази все ключевые разделы, упомянутые в статье. Избегай общих фраз.
-            3. Sentiment: Определи тон (Positive, Neutral, Negative, Technical).
-            4. Clickbait Score: Оцени от 0 до 10, насколько заголовок или контент манипулятивны.
-            5. Tags: 3-5 ключевых тегов (хештегов) на русском.
-            
-            ЯЗЫК: Русский (Russian).
-            ФОРМАТ: Строгий JSON без комментариев.
-            
-            {
-                "mainIdea": "string",
-                "keyPoints": ["string", "string"],
-                "sentiment": "string",
-                "clickbaitScore": int,
-                "tags": ["string", "string"]
-            }
+           You are an expert in information synthesis and data distillation. Your goal is to transform long-form text into a highly readable, concise summary for a busy audience.
+
+CONTENT REQUIREMENTS:
+1. mainIdea: A single short sentence. Explain the essence and why it matters.
+2. keyPoints: 
+   - If the text contains a specific list (e.g., "10 tips"), list every single item.
+   - If it is a standard longread, extract the 5-7 most significant insights.
+   - Use ONLY simple, short sentences. No subordinate clauses or complex structures.
+   - Strictly avoid long dashes (—). Use a regular hyphen (-) or no dash at all.
+   - Avoid meta-references like "The article states," "The author mentions," or "The text describes." State facts directly.
+3. sentiment: One word (Positive, Neutral, or Critical).
+4. clickbaitScore: An integer from 0 to 10, assessing how much the headline manipulates the reader.
+
+OUTPUT STYLE:
+- Professional, dry, and factual. 
+- Zero "filler" words.
+- High information density.
+
+LANGUAGE:
+- The values in the JSON must be in Russian.
+
+FORMAT:
+- Return ONLY strict JSON. No markdown blocks, no preamble.
+
+JSON STRUCTURE:
+{
+    "mainIdea": "string",
+    "keyPoints": ["string"],
+    "sentiment": "string",
+    "clickbaitScore": int
+}
         """.trimIndent()
         
         val VOICE_MESSAGE_PROMPT = """

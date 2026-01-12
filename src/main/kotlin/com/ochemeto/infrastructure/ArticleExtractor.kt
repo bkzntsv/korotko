@@ -12,6 +12,7 @@ import io.ktor.client.request.header
 import io.ktor.client.statement.bodyAsText
 import io.ktor.http.HttpHeaders
 import io.ktor.http.HttpStatusCode
+import io.ktor.http.encodeURLParameter
 import net.dankito.readability4j.Readability4J
 import org.jsoup.Jsoup
 import mu.KotlinLogging
@@ -36,6 +37,14 @@ class ArticleExtractor(
     }
 
     override suspend fun extractContent(url: String): Result<ExtractedContent> {
+        // Use ZenRows for LinkedIn or if explicitly configured
+        val useZenRows = config.zenRowsApiKey != null && 
+            (url.contains("linkedin.com", ignoreCase = true) || url.contains("lnkd.in", ignoreCase = true))
+
+        if (useZenRows) {
+            return fetchWithZenRows(url, config.zenRowsApiKey!!)
+        }
+
         return try {
             logger.info { "Fetching URL: $url" }
             
@@ -53,10 +62,20 @@ class ArticleExtractor(
 
             when (response.status) {
                 HttpStatusCode.OK -> processResponse(response.bodyAsText(), url)
-                HttpStatusCode.Forbidden -> Result.Failure(SummarizerError.NetworkError("Access denied (403)"))
+                HttpStatusCode.Forbidden -> {
+                     if (config.zenRowsApiKey != null) {
+                         logger.warn { "Access denied (403), retrying with ZenRows" }
+                         fetchWithZenRows(url, config.zenRowsApiKey!!)
+                     } else {
+                         Result.Failure(SummarizerError.NetworkError("Access denied (403)"))
+                     }
+                }
                 HttpStatusCode.NotFound -> Result.Failure(SummarizerError.NetworkError("Page not found (404)"))
                 else -> {
-                    if (response.status.value >= 500) {
+                    if (response.status.value == 999 && config.zenRowsApiKey != null) {
+                        logger.warn { "Server error (999), retrying with ZenRows" }
+                        fetchWithZenRows(url, config.zenRowsApiKey!!)
+                    } else if (response.status.value >= 500) {
                         Result.Failure(SummarizerError.NetworkError("Server error (${response.status.value})"))
                     } else {
                         // Try to parse anyway for other 2xx codes
@@ -76,12 +95,50 @@ class ArticleExtractor(
         }
     }
 
+    private suspend fun fetchWithZenRows(originalUrl: String, apiKey: String): Result<ExtractedContent> {
+        return try {
+            logger.info { "Fetching via ZenRows: $originalUrl" }
+            val encodedUrl = originalUrl.encodeURLParameter()
+            
+            // Пробуем минимальную конфигурацию, которая часто работает стабильнее
+            // js_render=true обязателен для LinkedIn (SPA)
+            // premium_proxy=true обязателен для обхода 999 и маскировки
+            val zenRowsUrl = "https://api.zenrows.com/v1/?apikey=$apiKey&url=$encodedUrl&js_render=true&premium_proxy=true"
+            
+            val response = httpClient.get(zenRowsUrl)
+            
+            if (response.status == HttpStatusCode.OK) {
+                processResponse(response.bodyAsText(), originalUrl)
+            } else {
+                 Result.Failure(SummarizerError.NetworkError("ZenRows error (${response.status.value}): ${response.bodyAsText()}"))
+            }
+        } catch (e: Exception) {
+            logger.error(e) { "ZenRows extraction failed for $originalUrl" }
+            Result.Failure(SummarizerError.UnknownError(e))
+        }
+    }
+
     private fun processResponse(html: String, url: String): Result<ExtractedContent> {
         val doc = Jsoup.parse(html, url)
-        val readability = Readability4J(url, doc).parse()
         
-        var text = readability.textContent?.takeIf { it.isNotBlank() } 
-            ?: manualExtraction(doc)
+        // Для LinkedIn не используем Readability, так как он вырезает списки опыта работы
+        val isLinkedIn = url.contains("linkedin.com", ignoreCase = true) || url.contains("lnkd.in", ignoreCase = true)
+        
+        var text: String
+        var title: String? = null
+        
+        if (isLinkedIn) {
+            // Специфичная логика для LinkedIn: просто берем весь текст body, так как Readability ломает профили
+            // Удаляем явный мусор
+            doc.select("script, style, nav, footer, .ad, iframe").remove()
+            text = doc.body().text()
+            title = doc.title()
+        } else {
+            // Стандартная логика для статей
+            val readability = Readability4J(url, doc).parse()
+            text = readability.textContent?.takeIf { it.isNotBlank() } ?: manualExtraction(doc)
+            title = readability.title ?: doc.title()
+        }
 
         text = text.trim()
 
@@ -97,7 +154,7 @@ class ArticleExtractor(
 
         return Result.Success(ExtractedContent(
             text = finalText,
-            title = readability.title ?: doc.title(),
+            title = title,
             url = url,
             wasTruncated = truncated
         ))
