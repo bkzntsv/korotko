@@ -44,12 +44,21 @@ val appModule = module {
         }
     }
     
+    // OpenAI клиент используется только для транскрипции голосовых сообщений
+    // Для чата используется Azure OpenAI через HTTP API
     single {
         OpenAI(token = get<BotConfig>().openAiApiKey)
     }
 
     single<ContentExtractor> { ArticleExtractor(get(), get()) }
-    single<AIProvider> { OpenAIProvider(get<BotConfig>().openAiApiKey, get()) }
+    single<AIProvider> { 
+        OpenAIProvider(
+            apiKey = get<BotConfig>().openAiApiKey,
+            httpClient = get(),
+            azureBaseUrl = get<BotConfig>().azureOpenAiBaseUrl!!,
+            azureSupportedModels = get<BotConfig>().azureSupportedModels!!
+        )
+    }
     single<SummaryOrchestrator> { SummaryOrchestratorImpl(get(), get()) }
 }
 

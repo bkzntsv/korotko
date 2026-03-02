@@ -5,7 +5,9 @@ data class BotConfig(
     val openAiApiKey: String,
     val userAgent: String = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
     val zenRowsApiKey: String? = null,
-    val linkedinCookie: String? = null
+    val linkedinCookie: String? = null,
+    val azureOpenAiBaseUrl: String? = null,
+    val azureSupportedModels: String? = null
 )
 
 class ConfigurationException(message: String) : RuntimeException(message)
@@ -22,21 +24,28 @@ object ConfigLoader {
         val telegramToken = envProvider.get("TELEGRAM_BOT_TOKEN")
             ?: throw ConfigurationException("TELEGRAM_BOT_TOKEN not set")
             
-        val openAiApiKey = envProvider.get("OPENAI_API_KEY")
-            ?: throw ConfigurationException("OPENAI_API_KEY not set")
+        val openAiApiKey = envProvider.get("AZURE_OPENAI_API_KEY")
+            ?: throw ConfigurationException("AZURE_OPENAI_API_KEY not set")
             
         val userAgent = envProvider.get("USER_AGENT") 
             ?: "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
 
         val zenRowsApiKey = envProvider.get("ZENROWS_API_KEY")?.takeIf { it.isNotBlank() }
         val linkedinCookie = envProvider.get("LINKEDIN_COOKIE")?.takeIf { it.isNotBlank() }
+        
+        val azureOpenAiBaseUrl = envProvider.get("AZURE_OPENAI_BASE_URL")
+            ?: throw ConfigurationException("AZURE_OPENAI_BASE_URL not set")
+        val azureSupportedModels = envProvider.get("AZURE_SUPPORTED_MODELS")
+            ?: throw ConfigurationException("AZURE_SUPPORTED_MODELS not set")
 
         return BotConfig(
             telegramToken = telegramToken,
             openAiApiKey = openAiApiKey,
             userAgent = userAgent,
             zenRowsApiKey = zenRowsApiKey,
-            linkedinCookie = linkedinCookie
+            linkedinCookie = linkedinCookie,
+            azureOpenAiBaseUrl = azureOpenAiBaseUrl,
+            azureSupportedModels = azureSupportedModels
         )
     }
 }

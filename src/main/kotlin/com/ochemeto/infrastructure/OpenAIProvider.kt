@@ -10,7 +10,6 @@ import io.ktor.client.request.header
 import io.ktor.client.request.post
 import io.ktor.client.request.setBody
 import io.ktor.http.ContentType
-import io.ktor.http.HttpHeaders
 import io.ktor.http.contentType
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
@@ -25,10 +24,13 @@ interface AIProvider {
 
 class OpenAIProvider(
     private val apiKey: String,
-    private val httpClient: HttpClient
+    private val httpClient: HttpClient,
+    private val azureBaseUrl: String,
+    private val azureSupportedModels: String
 ) : AIProvider {
 
     private val json = Json { ignoreUnknownKeys = true }
+    private val azureModels = azureSupportedModels.split(",").map { it.trim() }
 
     override suspend fun generateSummary(content: ExtractedContent): Result<Summary> {
         // Определяем тип контента: голосовое сообщение или статья
@@ -45,8 +47,17 @@ class OpenAIProvider(
         )
 
         return try {
-            val response = httpClient.post("https://api.openai.com/v1/chat/completions") {
-                header(HttpHeaders.Authorization, "Bearer $apiKey")
+            val deploymentName = azureModels.firstOrNull { MODEL.contains(it, ignoreCase = true) } ?: azureModels.first()
+            // o3 модели требуют API версию 2024-12-01-preview или новее
+            val apiVersion = if (deploymentName.contains("o3", ignoreCase = true)) {
+                "2024-12-01-preview"
+            } else {
+                "2024-02-15-preview"
+            }
+            val url = "${azureBaseUrl.trimEnd('/')}/openai/deployments/$deploymentName/chat/completions?api-version=$apiVersion"
+            
+            val response = httpClient.post(url) {
+                header("api-key", apiKey)
                 contentType(ContentType.Application.Json)
                 setBody(request)
             }
@@ -58,14 +69,14 @@ class OpenAIProvider(
                 } catch (e: Exception) {
                     "Unable to read error body: ${e.message}"
                 }
-                logger.error { "OpenAI API error: ${response.status} - $errorBody" }
+                logger.error { "Azure OpenAI API error: ${response.status} - $errorBody" }
                 
                 // Формируем понятное сообщение для пользователя
                 val userMessage = when (response.status.value) {
-                    429 -> "Превышен лимит запросов к OpenAI. Попробуйте позже."
-                    401 -> "Ошибка аутентификации OpenAI API. Проверьте API ключ."
-                    500, 502, 503, 504 -> "Временная ошибка сервера OpenAI. Попробуйте позже."
-                    else -> "Ошибка OpenAI API: ${response.status}"
+                    429 -> "Превышен лимит запросов к Azure OpenAI. Попробуйте позже."
+                    401 -> "Ошибка аутентификации Azure OpenAI API. Проверьте API ключ."
+                    500, 502, 503, 504 -> "Временная ошибка сервера Azure OpenAI. Попробуйте позже."
+                    else -> "Ошибка Azure OpenAI API: ${response.status}"
                 }
                 return Result.Failure(SummarizerError.AIError(userMessage))
             }
@@ -76,12 +87,12 @@ class OpenAIProvider(
             } catch (e: kotlinx.serialization.SerializationException) {
                 // Если десериализация не удалась, возможно это ошибка API в формате JSON
                 // Но body уже прочитан, поэтому нужно использовать другой подход
-                logger.error { "Failed to deserialize OpenAI response: $e" }
-                return Result.Failure(SummarizerError.AIError("Invalid response format from OpenAI: ${e.message}"))
+                logger.error { "Failed to deserialize Azure OpenAI response: $e" }
+                return Result.Failure(SummarizerError.AIError("Invalid response format from Azure OpenAI: ${e.message}"))
             }
 
             val contentJson = chatResponse.choices.firstOrNull()?.message?.content
-                ?: return Result.Failure(SummarizerError.AIError("Empty response from OpenAI"))
+                ?: return Result.Failure(SummarizerError.AIError("Empty response from Azure OpenAI"))
 
             val dto = json.decodeFromString<SummaryDto>(contentJson)
             
@@ -97,7 +108,7 @@ class OpenAIProvider(
             ))
 
         } catch (e: Exception) {
-            logger.error(e) { "OpenAI request failed" }
+            logger.error(e) { "Azure OpenAI request failed" }
             Result.Failure(SummarizerError.AIError(e.message ?: "Unknown AI error"))
         }
     }

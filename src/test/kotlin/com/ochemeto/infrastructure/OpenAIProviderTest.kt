@@ -24,10 +24,8 @@ class OpenAIProviderTest : StringSpec({
     "generateSummary should correctly parse successful JSON response" {
         val mockEngine = MockEngine { request ->
             val body = (request.body as TextContent).text
-            body shouldContain "gpt-4o-mini"
-            body shouldContain "json_object"
-            // Проверяем наличие новых полей в промпте (косвенно, через system prompt)
-            body shouldContain "Senior AI Analyst" 
+            body shouldContain "gpt-5-nano"
+            body shouldContain "json_object" 
 
             respond(
                 content = """

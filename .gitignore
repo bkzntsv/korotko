@@ -7,6 +7,8 @@ out
 .kiro
 .vscode
 .env
+*.hprof
+deploy_tmp/
 # Local MCP configs
 .cursor/
 run_gradle_mcp.py
