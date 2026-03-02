@@ -48,7 +48,12 @@ class OpenAIProviderTest : StringSpec({
             install(ContentNegotiation) { json(json) }
         }
         
-        val provider = OpenAIProvider("key", client)
+        val provider = OpenAIProvider(
+            apiKey = "key",
+            httpClient = client,
+            azureBaseUrl = "https://test.openai.azure.com/openai/v1/",
+            azureSupportedModels = "gpt-5-nano"
+        )
         val content = ExtractedContent("Some text", "Title", "http://url.com")
         
         val result = provider.generateSummary(content)
@@ -70,7 +75,12 @@ class OpenAIProviderTest : StringSpec({
             install(ContentNegotiation) { json(json) }
         }
         
-        val provider = OpenAIProvider("key", client)
+        val provider = OpenAIProvider(
+            apiKey = "key",
+            httpClient = client,
+            azureBaseUrl = "https://test.openai.azure.com/openai/v1/",
+            azureSupportedModels = "gpt-5-nano"
+        )
         val content = ExtractedContent("Some text", "Title", "http://url.com")
         
         val result = provider.generateSummary(content)
